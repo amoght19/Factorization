@@ -19,8 +19,6 @@ def sieve():
         for j in range(i << 1, N, i):
             prime[j] = 0
 
-sieve()
-
 def modPow(a, b, m):
     res = 1
     while b > 0:
@@ -58,20 +56,60 @@ def millerRabin(n):
             return 0
     return 1
 
+def f(x:int,c:int,mod:int)->int:
+    return (modPow(x,2,mod)+c)%mod
+
+############ Pollard Rho ################################
+# works in O(N^0.25)
+def rho(n:int,x0:int,c:int)->int:
+    if n&1==0 :
+        return 2
+    x=x0
+    y=x0
+    g=1
+    cnt = 800000
+    while g==1 and cnt>0:
+        x=f(x,c,n)
+        y=f(f(y,c,n),c,n)
+        g=gcd(abs(x-y),n)
+        cnt-=1
+    
+    return g
+
 def get_factors(n):
     factors = {}
-    def get(n, m):
-        if n <= 1:
+
+    for k in primes:
+        if k > n:
+            break
+
+        while n%k==0:
+            factors[k]=factors.get(k,0)+1
+            n//=k
+        
+    def get(n:int,m:dict)->None:
+        if n<=1:
             return
-        if millerRabin(n):
-            m[n] = m.get(n, 0) + 1
+        # print("call for n=",n)
+    
+        p=millerRabin(n)
+        # print("prime status=",p)
+        if p == 1:
+            m[n]= 1 if n not in m else m[n]+1
             return
-        d, cnt = n, 2
-        while d == n:
-            d = gcd(randint(2, n - 1), n)
-            cnt += 1
-        get(d, m)
-        get(n // d, m)
+
+        d,cnt=rho(n,2,1),2
+    
+        # print("for n=",n," div=",d)
+
+        if d==n:
+            d=rho(n,2,cnt)
+            cnt+=1
+    
+        if d==1:
+            return
+        get(d,m)
+        get(n//d,m)
 
     get(n, factors)
     return dict(sorted(factors.items()))
@@ -94,5 +132,6 @@ def home():
     return render_template("index.html", result=result, number=number)
 
 if __name__ == "__main__":
+    sieve()
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
